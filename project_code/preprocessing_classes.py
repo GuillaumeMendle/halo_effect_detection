@@ -8,7 +8,7 @@ from itertools import product
 import plotly.graph_objects as go
 import plotly.express as px
 import seaborn as sns
-import utils as ut
+import project_code.utils as ut
 # pip install --upgrade nbformat
 # pip install -U kaleido
 
@@ -50,17 +50,35 @@ class DataPreprocessing:
         df = df[df["REVENUE"]> 0]
         return df
     
+    def create_cluster_id(self, row : pd.Series) -> str:
+        """ 
+        Create a cluster name for every item given Department, Category, Subcategory1, etc.
+        """
+        department_name = row["DEPARTMENT"]
+        category_name = row["CATEGORY"]
+        subcategory_1_name = row["SUBCATEGORY1"]
+
+        cluster_name = department_name
+        if department_name == "Weighed":
+            cluster_name = category_name
+        if department_name == "Services":
+            cluster_name = subcategory_1_name
+        if cluster_name == "Bird" or cluster_name == "Wildbird" or cluster_name == "Dom.Bird":
+            cluster_name = "Bird"
+        return cluster_name
+
     def run_data_preprocessing_piepeline(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Import the datasets and run the whole preprocessing pipeline. 
         """
         skus_data, transactions_data = self.import_data()
+        skus_data["CLUSTER_NAME"] = ""
+        skus_data["CLUSTER_NAME"] = skus_data.apply(lambda x : self.create_cluster_id(x), axis = 1)
         transactions_data = self.merge_skus_transactions(skus_data, transactions_data)
         transactions_data = self.remove_anomalies(transactions_data)
         df_item_purchases = self.calculate_items_bought(transactions_data)
         skus_data = self.add_transaction_details_skus(skus_data, df_item_purchases)
         return skus_data, transactions_data
-
     
 
 class DataExploration(DataPreprocessing):
