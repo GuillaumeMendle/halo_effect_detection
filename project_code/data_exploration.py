@@ -12,7 +12,7 @@ import utils as ut
 from data_processing_classes import DataExploration
 from discount_effect_classes import DiscountEffect
 
-min_transactions = 4
+min_transactions = 6
 
 if __name__ == "__main__":
     data_exploration = DataExploration()
