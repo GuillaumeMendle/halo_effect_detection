@@ -8,17 +8,15 @@ from itertools import product
 import plotly.graph_objects as go
 import plotly.express as px
 import seaborn as sns
-import project_code.utils as ut
+import utils as ut
 from data_processing_classes import DataExploration
-# pip install --upgrade nbformat
-# pip install -U kaleido
 
 def generate_upsell_reco(df : pd.DataFrame) -> pd.DataFrame:
     """
     Format the dataframe to generate a file containing SKUs with the other items to up-sell. 
     """
     ## Order the items so that 'rec 1' is better than 'rec 2', better than 'rec 3'
-    pairs_df_top_neighbors_sorted = df.sort_values(by=["SKU_1", "NEIGHBOR_RANKING", "CONVICTION"], ascending=[True, True, False])
+    pairs_df_top_neighbors_sorted = df.sort_values(by=["SKU_1", "NEIGHBOR_RANKING", "LIFT"], ascending=[True, True, False])
 
     ## Group by SKU 1 and collect sorted SKU 2 as a list
     pairs_df_top_neighbors_sorted = pairs_df_top_neighbors_sorted.groupby("SKU_1")["SKU_2"].apply(list).reset_index()
@@ -227,13 +225,13 @@ class NeighborsGraph(AprioriModel):
         """
         Create a graph to represent the intereactions between all the SKUs.
         - Node: a unique SKU
-        - Edge: the conviction score between Node 1 and Node 2 
+        - Edge: the Lift score between Node 1 and Node 2 
         """
         G = nx.Graph()
         for _, row in df.iterrows():
             G.add_node(int(row["SKU_1"]), label=row["ITEM_DESCRIPTION_1"])
             G.add_node(int(row["SKU_2"]), label=row["ITEM_DESCRIPTION_2"])
-            G.add_edge(int(row["SKU_1"]), int(row["SKU_2"]), weight=row["CONVICTION"])
+            G.add_edge(int(row["SKU_1"]), int(row["SKU_2"]), weight=row["LIFT"])
         return G
     
     def remove_node_neighbors(self, node_neighbors_dict : dict) -> dict:

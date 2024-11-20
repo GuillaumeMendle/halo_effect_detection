@@ -9,9 +9,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 import seaborn as sns
 import utils as ut
-from project_code.data_processing_classes import DataExploration
+from data_processing_classes import DataExploration
+from discount_effect_classes import DiscountEffect
 
-min_transactions = 6
+min_transactions = 4
 
 if __name__ == "__main__":
     data_exploration = DataExploration()
@@ -27,3 +28,21 @@ if __name__ == "__main__":
     remaining_revenue = data_exploration.share_revenue_items_sold(skus_data, min_transactions)
     print(f"Total percentage of revenue left after dropping items with less than {min_transactions} transactions: {round(remaining_revenue, 2)}%")
 
+    ## Measure impact of promotion on quantity sold
+    discount_effect = DiscountEffect()
+    transactions_data_discount = transactions_data.copy()
+
+    ## Flag when an item is discounted in for every transaction
+    transactions_data_discount = discount_effect.discount_flag_and_calculation(transactions_data_discount)
+    discount_or_no_df = transactions_data_discount['DISCOUNT_APPLIED'].value_counts()
+    print(f"Distribution of discount/no discount in transactions: {round(discount_or_no_df[1]/discount_or_no_df.sum()*100,2)}%")
+
+    ## Return SKUs which got sold discounted and not discounted over the past 3 months
+    transactions_data_discount = discount_effect.flag_discounted_SKU(transactions_data_discount)
+
+    ## Return the average ratio quantity/transactions for items sold without discount
+    ## and items sold after applying a promotion lower than a threshold 
+    df_impact_discount = discount_effect.measure_impact_discount(transactions_data_discount, 0.75)
+
+    ## Generate a graph comparing the quantity sold per transaction with and without discount applied on the same items.
+    discount_effect.plot_impact_discount(df_impact_discount)

@@ -11,8 +11,8 @@ import seaborn as sns
 import utils as ut
 from data_processing_classes import DataExploration
 from model_classes import AprioriModel, NeighborsGraph
-# pip install --upgrade nbformat
-# pip install -U kaleido
+from pyvis.network import Network
+import networkx as nx
 
 build_model = NeighborsGraph()
 
@@ -54,12 +54,12 @@ def run_model_pipeline():
 
     return pairs_df_top3, skus_data, transactions_data
 
-def generate_upsell_reco(df : pd.DataFrame) -> pd.DataFrame:
+def generate_upsell_reco(df : pd.DataFrame):
     """
     Format the dataframe to generate a file containing SKUs with the other items to up-sell. 
     """
     ## Order the items so that 'rec 1' is better than 'rec 2', better than 'rec 3'
-    pairs_df_top_neighbors_sorted = df.sort_values(by=["SKU_1", "NEIGHBOR_RANKING", "CONVICTION"], ascending=[True, True, False])
+    pairs_df_top_neighbors_sorted = df.sort_values(by=["SKU_1", "NEIGHBOR_RANKING", "LIFT"], ascending=[True, True, False])
 
     ## Group by SKU 1 and collect sorted SKU 2 as a list
     pairs_df_top_neighbors_sorted = pairs_df_top_neighbors_sorted.groupby("SKU_1")["SKU_2"].apply(list).reset_index()
@@ -71,14 +71,10 @@ def generate_upsell_reco(df : pd.DataFrame) -> pd.DataFrame:
 
     ## Drop and rename columns before saving file
     df_expanded = df_reco.drop(columns=["SKU_2"])
-    # df_expanded = df_expanded.fillna(0)
-    # df_expanded = df_expanded.astype(int)
-
     df_expanded = df_expanded.rename(columns = {"SKU_1" : "sku"})
 
     ## Save file
     df_expanded.to_csv(f"{ut.CURRENT_DIRECTORY}/results/upsell_results.csv", index=False)
-    return df_expanded
 
 if __name__ == "__main__":
     ## Import SKUs and Transactions datasets
@@ -114,6 +110,5 @@ if __name__ == "__main__":
     ## Add neighbors with a degree of 2 to the neighbors with a degree of 1 (existing top 3 up-sell items for every SKU)
     ## Fill the top 3 with neighbors with a degree of 2 if top 3 incomplete
     pairs_df_top_neighbors = build_model.add_neighbors_n_2_to_n_1(pairs_df_top3, neighbors_degree_2)
-
-    df_expanded = generate_upsell_reco(pairs_df_top_neighbors)
-    print(df_expanded)
+        
+    generate_upsell_reco(pairs_df_top_neighbors)
