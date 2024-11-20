@@ -8,7 +8,7 @@ from itertools import product
 import plotly.graph_objects as go
 import plotly.express as px
 import seaborn as sns
-import project_code.utils as ut
+import utils as ut
 # pip install --upgrade nbformat
 # pip install -U kaleido
 
@@ -66,6 +66,17 @@ class DataPreprocessing:
         if cluster_name == "Bird" or cluster_name == "Wildbird" or cluster_name == "Dom.Bird":
             cluster_name = "Bird"
         return cluster_name
+    
+    def remove_department(df_skus : pd.DataFrame, df_transactions : pd.DataFrame, department_name : str = "Misc.") -> tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Remove a specific department in the datasets. 
+        """
+        df_transactions[df_transactions["DEPARTMENT"]==department_name]["REVENUE"].sum()/df_transactions["REVENUE"].sum()
+        print(f"Percentage of transactions department {department_name} represents: {len(df_transactions[df_transactions['DEPARTMENT']==department_name])/len(df_transactions)}")
+        print(f"Percentage of revenue department {department_name} represents: {df_transactions[df_transactions['DEPARTMENT']==department_name]['REVENUE'].sum()/df_transactions['REVENUE'].sum()}")
+        df_transactions = df_transactions[df_transactions["DEPARTMENT"]!=department_name]
+        df_skus = df_skus[df_skus["DEPARTMENT"]!=department_name]
+        return df_skus, df_transactions
 
     def run_data_preprocessing_piepeline(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -80,6 +91,21 @@ class DataPreprocessing:
         skus_data = self.add_transaction_details_skus(skus_data, df_item_purchases)
         return skus_data, transactions_data
     
+    def merge_sku_cluster_statistics(self, df_skus : pd.DataFrame, df_clusters : pd.DataFrame) -> pd.DataFrame:
+        """
+        Add clsuter statistics to the SKUs dataset. 
+        """
+        return df_skus.merge(df_clusters, on = "CLUSTER_NAME", how = "left")
+    
+    def calculate_support_sku(self, df : pd.DataFrame) -> pd.DataFrame:
+        """
+        Calculate the Support metric of every item.
+        Support = Total number of transactions Item A / Total number of transactions cluster.
+        """
+        df["SUPPORT_CLUSTER"] = df["SKU_TOTAL_TRANSACTION"]/df["CLUSTER_TOTAL_TRANSACTION"]
+        return df
+
+        
 
 class DataExploration(DataPreprocessing):
     def find_missing_SKU_transactions(self, df_skus : pd.DataFrame, df_transactions : pd.DataFrame) -> pd.DataFrame:
@@ -107,7 +133,7 @@ class DataExploration(DataPreprocessing):
         plt.xlabel("Number of items per basket", fontsize=12)
         plt.ylabel("Number of basket with X items", fontsize=12)
         plt.grid(axis='y', linestyle='--', alpha=0.6)
-        plt.savefig(f"{ut.CURRENT_DIRECTORY}/data/nbre_items_per_transaction.png")
+        plt.savefig(f"{ut.CURRENT_DIRECTORY}/plots_graph/nbre_items_per_transaction.png")
         plt.close()
 
     def plot_hierarchical_categories(self, df : pd.DataFrame) -> None:
@@ -116,7 +142,7 @@ class DataExploration(DataPreprocessing):
         """
         hierarchical_categories = df[["DEPARTMENT", "CATEGORY"]].drop_duplicates()
         fig = px.treemap(hierarchical_categories, path=["DEPARTMENT", "CATEGORY"])
-        fig.write_image(f"{ut.CURRENT_DIRECTORY}/data/department_category_tree.png")
+        fig.write_image(f"{ut.CURRENT_DIRECTORY}/plots_graph/department_category_tree.png")
 
 
     def share_revenue_items_sold(self, df : pd.DataFrame, threshold_transactions : int) -> float:
@@ -124,4 +150,14 @@ class DataExploration(DataPreprocessing):
         Return percentage of revenue one keeps after dropping low-frequency items. 
         """
         return df[df["SKU_TOTAL_TRANSACTION"] >= threshold_transactions]["SKU_TOTAL_REVENUE"].sum()/df["SKU_TOTAL_REVENUE"].sum()
+    
+    def total_transactions_per_cluster(self, df : pd.DataFrame) -> pd.DataFrame:
+        """
+        Return the total number of transactions and revenue per cluster.
+        """
+        return df.groupby(["CLUSTER_NAME"]).agg(
+            CLUSTER_TOTAL_TRANSACTION = ("TRANSACTION_ID", "count"),
+            CLUSTER_TOTAL_REVENUE = ("REVENUE", "sum")
+        ).reset_index()
+
     

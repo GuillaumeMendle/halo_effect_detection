@@ -1,0 +1,9 @@
+kaleido==0.2.1
+matplotlib==3.9.2
+nbformat==5.10.4
+networkx==3.4.2
+numpy==2.1.3
+pandas==2.2.3
+plotly==5.24.1
+pyvis==0.3.2
+seaborn==0.13.2

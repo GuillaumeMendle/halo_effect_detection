@@ -9,9 +9,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import seaborn as sns
 import utils as ut
-from preprocessing_classes import DataExploration
-# pip install --upgrade nbformat
-# pip install -U kaleido
+from project_code.data_processing_classes import DataExploration
 
 min_transactions = 6
 
